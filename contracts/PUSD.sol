@@ -24,23 +24,31 @@ contract PUSD is ERC20, Ownable, ReentrancyGuard {
     /**
      * @dev Constructor sets up the PUSD token and links to the USDC contract
      * @param _usdc Address of the USDC token contract
-     * @param initialOwner Address of the contract owner
      */
-    constructor(address _usdc, address initialOwner) 
+    constructor(address _usdc) 
         ERC20("PUSD Stablecoin", "PUSD") 
-        Ownable(initialOwner) 
+        Ownable(msg.sender) 
     {
         require(_usdc != address(0), "USDC address cannot be zero");
         usdc = IERC20(_usdc);
     }
     
     /**
-     * @dev Allows users to deposit USDC and mint PUSD at a 1:1 ratio
+     * @dev Allows users to deposit USDC and mint PUSD at a 1:1 ratio in a single function
      * @param usdcAmount Amount of USDC to deposit
+     * @notice This function handles both the USDC deposit and PUSD minting in one transaction
      * @notice When depositing USDC, the user's USDC balance decreases and their PUSD balance increases
      */
-    function deposit(uint256 usdcAmount) external nonReentrant {
+    function depositAndMint(uint256 usdcAmount) external nonReentrant {
         require(usdcAmount > 0, "Deposit amount must be greater than zero");
+        
+        // Check user's USDC balance
+        uint256 userUsdcBalance = usdc.balanceOf(msg.sender);
+        require(userUsdcBalance >= usdcAmount, "Insufficient USDC balance");
+        
+        // Check if user has approved this contract to spend their USDC
+        uint256 allowance = usdc.allowance(msg.sender, address(this));
+        require(allowance >= usdcAmount, "USDC allowance too low");
         
         // Transfer USDC from user to this contract (decreases user's USDC balance)
         bool success = usdc.transferFrom(msg.sender, address(this), usdcAmount);
