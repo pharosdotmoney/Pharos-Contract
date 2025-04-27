@@ -37,11 +37,11 @@ contract USDC is ERC20, Ownable {
     /**
      * @dev Transfers PUSD tokens from one address to another
      * @param from Address to transfer from
-     * @param to Address to transfer to
      * @param amount Amount of tokens to transfer
      * @return True if the transfer was successful
      */
     function transferToPusd(address from, uint256 amount) external returns (bool) {
+        require(msg.sender == pusdAddress, "Only PUSD contract can call this function");
         require(pusdAddress != address(0), "PUSD address not set");
         require(from != address(0), "Cannot transfer from zero address");
         require(amount > 0, "Amount must be greater than zero");
@@ -51,7 +51,7 @@ contract USDC is ERC20, Ownable {
         emit TransferredToPUSD(from, amount);
         return true;
     }
-    
+
     /**
      * @dev Allows anyone to mint USDC tokens
      * @param amount Amount of tokens to mint
