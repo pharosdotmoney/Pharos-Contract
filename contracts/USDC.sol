@@ -48,7 +48,7 @@ contract USDC is ERC20, Ownable {
         require(balanceOf(from) >= amount, "Insufficient balance");
         // transfer from from address to pusd contract address
         _transfer(from, pusdAddress, amount);
-        emit TransferredToPUSD(from, pusdAddress, amount);
+        emit TransferredToPUSD(from, amount);
         return true;
     }
     
