@@ -5,9 +5,9 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
-import {OperatorRegistry} from "./OperatorRegistry.sol";
-import {DelegationManager} from "./DelegationManager.sol";
+import {Eigen} from "./Eigen.sol";
 import {PUSD} from "./PUSD.sol";
+import {IOperator} from "./IOperator.sol";
 
 /**
  * @title LoanManager
@@ -23,11 +23,12 @@ contract LoanManager is Ownable, ReentrancyGuard {
         uint256 dueTime;
         bool isRepaid;
         uint256 collateralAmount;
+        uint256 loanedUSDCAmount;
     }
     
-    OperatorRegistry public operatorRegistry;
-    DelegationManager public delegationManager;
+    Eigen public eigen;
     PUSD public pusdToken;
+    IOperator public operator;
     
     // Base interest rate in basis points (e.g., 300 = 3%)
     uint256 public baseInterestRate = 300;
@@ -38,8 +39,9 @@ contract LoanManager is Ownable, ReentrancyGuard {
     // Loan duration in seconds (default: 30 days)
     uint256 public loanDuration = 30 days;
     
-    // Mapping from operator address to their loan
-    mapping(address => Loan) public loans;
+    // only one operator is there
+    // no need for mapping
+    Loan public loan;
     
     // Events
     event LoanCreated(address indexed operator, uint256 amount, uint256 interestRate, uint256 dueTime);
@@ -49,22 +51,22 @@ contract LoanManager is Ownable, ReentrancyGuard {
     
     /**
      * @dev Constructor sets up the LoanManager
-     * @param _operatorRegistry Address of the operator registry
-     * @param _delegationManager Address of the delegation manager
+     * @param _eigen Address of the eigen
      * @param _pusdToken Address of the PUSD token
+     * @param _operator Address of the operator
      */
     constructor(
-        address _operatorRegistry,
-        address _delegationManager,
-        address _pusdToken
+        address _eigen,
+        address _pusdToken,
+        address _operator
     ) Ownable(msg.sender) {
-        require(_operatorRegistry != address(0), "Invalid operator registry address");
-        require(_delegationManager != address(0), "Invalid delegation manager address");
+        require(_eigen != address(0), "Invalid eigen address");
         require(_pusdToken != address(0), "Invalid PUSD token address");
+        require(_operator != address(0), "Invalid operator address");
         
-        operatorRegistry = OperatorRegistry(_operatorRegistry);
-        delegationManager = DelegationManager(_delegationManager);
+        eigen = Eigen(_eigen);
         pusdToken = PUSD(_pusdToken);
+        operator = IOperator(_operator);
     }
     
     /**
@@ -72,29 +74,30 @@ contract LoanManager is Ownable, ReentrancyGuard {
      * @param amount Amount of PUSD to borrow
      */
     function createLoan(uint256 amount) external nonReentrant {
-        require(operatorRegistry.isActiveOperator(msg.sender), "Not an active operator");
         require(amount > 0, "Loan amount must be greater than zero");
         require(loans[msg.sender].amount == 0 || loans[msg.sender].isRepaid, "Existing loan not repaid");
         
         // Get operator's delegated amount
-        (,uint256 delegatedAmount,,,) = operatorRegistry.getOperatorDetails(msg.sender);
+        uint256 delegatedAmount = eigen.getTotalDelegated();
         
         // Calculate maximum loan amount based on LTV ratio
         uint256 maxLoanAmount = (delegatedAmount * ltvRatio) / 100;
         require(amount <= maxLoanAmount, "Loan amount exceeds maximum allowed");
         
         // Create the loan
-        loans[msg.sender] = Loan({
+        loan = Loan({
             amount: amount,
             interestRate: baseInterestRate,
             startTime: block.timestamp,
             dueTime: block.timestamp + loanDuration,
             isRepaid: false,
-            collateralAmount: delegatedAmount
+            collateralAmount: delegatedAmount,
+            loanedUSDCAmount: 0
         });
         
-        // Mint PUSD to the operator
-        pusdToken.mint(amount);
+        // transfer usdc to the operator from pusd contract
+        bool success = pusdToken.transferToOperator(amount, operator);
+        require(success, "PUSD transfer failed");
         
         emit LoanCreated(msg.sender, amount, baseInterestRate, block.timestamp + loanDuration);
     }
@@ -103,7 +106,6 @@ contract LoanManager is Ownable, ReentrancyGuard {
      * @dev Repay a loan with interest
      */
     function repayLoan() external nonReentrant {
-        Loan storage loan = loans[msg.sender];
         require(loan.amount > 0 && !loan.isRepaid, "No active loan to repay");
         
         // Calculate interest
@@ -111,7 +113,7 @@ contract LoanManager is Ownable, ReentrancyGuard {
         uint256 totalRepayment = loan.amount + interest;
         
         // Transfer PUSD from operator to this contract
-        bool success = pusdToken.transferFrom(msg.sender, address(this), totalRepayment);
+        bool success = pusdToken.transferFromOperator(totalRepayment, operator);
         require(success, "PUSD transfer failed");
         
         // Mark loan as repaid
@@ -141,7 +143,6 @@ contract LoanManager is Ownable, ReentrancyGuard {
     
     /**
      * @dev Get loan details for an operator
-     * @param operator Address of the operator
      * @return amount Loan amount
      * @return interestRate Interest rate in basis points
      * @return startTime Loan start time
@@ -149,32 +150,31 @@ contract LoanManager is Ownable, ReentrancyGuard {
      * @return isRepaid Whether the loan is repaid
      * @return collateralAmount Amount of collateral
      */
-    function getLoanDetails(address operator) external view returns (
+    function getLoanDetails() external view returns (
         uint256 amount,
         uint256 interestRate,
         uint256 startTime,
         uint256 dueTime,
         bool isRepaid,
-        uint256 collateralAmount
+        uint256 collateralAmount,
+        uint256 loanedUSDCAmount
     ) {
-        Loan memory loan = loans[operator];
         return (
             loan.amount,
             loan.interestRate,
             loan.startTime,
             loan.dueTime,
             loan.isRepaid,
-            loan.collateralAmount
+            loan.collateralAmount,
+            loan.loanedUSDCAmount
         );
     }
     
     /**
      * @dev Calculate the current repayment amount for a loan
-     * @param operator Address of the operator
      * @return The total repayment amount (principal + interest)
      */
-    function calculateRepaymentAmount(address operator) external view returns (uint256) {
-        Loan memory loan = loans[operator];
+    function calculateRepaymentAmount() external view returns (uint256) {
         if (loan.amount == 0 || loan.isRepaid) {
             return 0;
         }

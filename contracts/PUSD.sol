@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./USDC.sol";
+import "./LoanManager.sol";
 
 /**
  * @title PUSD Stablecoin
@@ -13,6 +14,8 @@ import "./USDC.sol";
  */
 contract PUSD is ERC20, Ownable, ReentrancyGuard {
     USDC public usdc;
+    LoanManager public loanManager;
+    uint256 public loanedUSDCAmount = 0;
     
     // Mapping to track user deposits
     mapping(address => uint256) private userDeposits;
@@ -32,6 +35,15 @@ contract PUSD is ERC20, Ownable, ReentrancyGuard {
     {
         require(_usdc != address(0), "USDC address cannot be zero");
         usdc = USDC(_usdc);
+    }
+
+    /**
+     * @dev Sets the loan manager address
+     * @param _loanManager Address of the loan manager contract
+     */
+    function setLoanManager(address _loanManager) external onlyOwner {
+        require(_loanManager != address(0), "Loan manager address cannot be zero");
+        loanManager = LoanManager(_loanManager);
     }
     
     /**
@@ -103,7 +115,29 @@ contract PUSD is ERC20, Ownable, ReentrancyGuard {
         
     //     emit Mint(msg.sender, pusdAmount);
     // }
-    
+
+    // check usdc balance of address this
+    // check if call is from loan manager
+    // transfer to operator
+    // increment loanedUSDCAmount
+    function transferToOperator(uint256 usdcAmount, address operator) external nonReentrant returns (bool) {
+        require(msg.sender == address(loanManager), "Only loan manager can call this function");
+        require(usdcAmount > 0, "Transfer amount must be greater than zero");
+        require(usdc.balanceOf(address(this)) >= usdcAmount, "Insufficient USDC balance");
+        usdc.transfer(operator, usdcAmount);
+        loanedUSDCAmount += usdcAmount;
+        return true;
+    } 
+
+    function transferFromOperator(uint256 usdcAmount, address operator) external nonReentrant returns (bool) {
+        require(msg.sender == address(loanManager), "Only loan manager can call this function");
+        require(usdcAmount > 0, "Transfer amount must be greater than zero");
+        require(usdc.balanceOf(operator) >= usdcAmount, "Insufficient USDC balance");
+        usdc.transfer(address(this), usdcAmount);
+        loanedUSDCAmount -= usdcAmount;
+        return true;
+    }
+
     /**
      * @dev Returns the PUSD balance of a user
      * @param user Address of the user

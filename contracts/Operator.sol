@@ -2,7 +2,6 @@
 pragma solidity ^0.8.20;
 
 import "./IOperator.sol";
-import "./OperatorRegistry.sol";
 import "./LoanManager.sol";
 import "./PUSD.sol";
 
@@ -11,7 +10,6 @@ import "./PUSD.sol";
  * @dev Implementation of the Operator interface
  */
 contract Operator is IOperator {
-    OperatorRegistry public operatorRegistry;
     LoanManager public loanManager;
     PUSD public pusdToken;
     
@@ -19,20 +17,16 @@ contract Operator is IOperator {
     
     /**
      * @dev Constructor sets up the Operator
-     * @param _operatorRegistry Address of the operator registry
      * @param _loanManager Address of the loan manager
      * @param _pusdToken Address of the PUSD token
      */
     constructor(
-        address _operatorRegistry,
         address _loanManager,
         address _pusdToken
     ) {
-        require(_operatorRegistry != address(0), "Invalid operator registry address");
         require(_loanManager != address(0), "Invalid loan manager address");
         require(_pusdToken != address(0), "Invalid PUSD token address");
         
-        operatorRegistry = OperatorRegistry(_operatorRegistry);
         loanManager = LoanManager(_loanManager);
         pusdToken = PUSD(_pusdToken);
         owner = msg.sender;
@@ -46,24 +40,7 @@ contract Operator is IOperator {
         _;
     }
     
-    /**
-     * @dev Register as an operator in the system
-     * @param name Name of the operator
-     * @param metadataURI URI pointing to operator metadata
-     */
-    function register(string memory name, string memory metadataURI) external override onlyOwner {
-        operatorRegistry.registerOperator(address(this), name, metadataURI);
-    }
-    
-    /**
-     * @dev Get the total amount delegated to this operator
-     * @return The total delegated amount
-     */
-    function getTotalDelegated() external view override returns (uint256) {
-        (,uint256 totalDelegated,,,) = operatorRegistry.getOperatorDetails(address(this));
-        return totalDelegated;
-    }
-    
+
     /**
      * @dev Create a loan based on delegated tokens
      * @param amount Amount to borrow
@@ -95,7 +72,7 @@ contract Operator is IOperator {
         uint256 dueTime,
         bool isRepaid
     ) {
-        (amount,,,dueTime,isRepaid,) = loanManager.getLoanDetails(address(this));
+        (amount,,,dueTime,isRepaid,) = loanManager.getLoanDetails();
         return (amount, dueTime, isRepaid);
     }
     
@@ -104,7 +81,7 @@ contract Operator is IOperator {
      * @return The total repayment amount (principal + interest)
      */
     function getRepaymentAmount() external view override returns (uint256) {
-        return loanManager.calculateRepaymentAmount(address(this));
+        return loanManager.calculateRepaymentAmount();
     }
     
     /**
