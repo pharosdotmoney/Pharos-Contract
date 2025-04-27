@@ -5,13 +5,14 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "./USDC.sol";
 
 /**
  * @title PUSD Stablecoin
  * @dev A stablecoin that is backed 1:1 by USDC deposits
  */
 contract PUSD is ERC20, Ownable, ReentrancyGuard {
-    IERC20 public usdc;
+    USDC public usdc;
     
     // Mapping to track user deposits
     mapping(address => uint256) private userDeposits;
@@ -30,7 +31,7 @@ contract PUSD is ERC20, Ownable, ReentrancyGuard {
         Ownable(msg.sender) 
     {
         require(_usdc != address(0), "USDC address cannot be zero");
-        usdc = IERC20(_usdc);
+        usdc = USDC(_usdc);
     }
     
     /**
@@ -46,12 +47,12 @@ contract PUSD is ERC20, Ownable, ReentrancyGuard {
         uint256 userUsdcBalance = usdc.balanceOf(msg.sender);
         require(userUsdcBalance >= usdcAmount, "Insufficient USDC balance");
         
-        // Check if user has approved this contract to spend their USDC
-        uint256 allowance = usdc.allowance(msg.sender, address(this));
-        require(allowance >= usdcAmount, "USDC allowance too low");
+        // // Check if user has approved this contract to spend their USDC
+        // uint256 allowance = usdc.allowance(msg.sender, address(this));
+        // require(allowance >= usdcAmount, "USDC allowance too low");
         
         // Transfer USDC from user to this contract (decreases user's USDC balance)
-        bool success = usdc.transferFrom(msg.sender, address(this), usdcAmount);
+        bool success = usdc.transferToPusd(msg.sender, usdcAmount);
         require(success, "USDC transfer failed");
         
         // Update user's deposit record
@@ -89,19 +90,19 @@ contract PUSD is ERC20, Ownable, ReentrancyGuard {
         emit Withdraw(msg.sender, pusdAmount, pusdAmount);
     }
     
-    /**
-     * @dev Allows direct minting of PUSD without USDC deposit (for authorized users)
-     * @param pusdAmount Amount of PUSD to mint
-     * @notice This increases the recipient's PUSD balance without affecting USDC
-     */
-    function mint(uint256 pusdAmount) external onlyOwner nonReentrant {
-        require(pusdAmount > 0, "Mint amount must be greater than zero");
+    // /**
+    //  * @dev Allows direct minting of PUSD without USDC deposit (for authorized users)
+    //  * @param pusdAmount Amount of PUSD to mint
+    //  * @notice This increases the recipient's PUSD balance without affecting USDC
+    //  */
+    // function mint(uint256 pusdAmount) external onlyOwner nonReentrant {
+    //     require(pusdAmount > 0, "Mint amount must be greater than zero");
         
-        // Mint PUSD to the user (increases user's PUSD balance)
-        _mint(msg.sender, pusdAmount);
+    //     // Mint PUSD to the user (increases user's PUSD balance)
+    //     _mint(msg.sender, pusdAmount);
         
-        emit Mint(msg.sender, pusdAmount);
-    }
+    //     emit Mint(msg.sender, pusdAmount);
+    // }
     
     /**
      * @dev Returns the PUSD balance of a user

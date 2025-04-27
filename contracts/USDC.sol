@@ -14,7 +14,7 @@ contract USDC is ERC20, Ownable {
     // Events
     event TokensMinted(address indexed to, uint256 amount);
     event PUSDAddressSet(address indexed pusdAddress);
-    event TransferredFromPUSD(address indexed from, address indexed to, uint256 amount);
+    event TransferredToPUSD(address indexed from, uint256 amount);
     
     // PUSD contract address
     address public pusdAddress;
@@ -41,17 +41,14 @@ contract USDC is ERC20, Ownable {
      * @param amount Amount of tokens to transfer
      * @return True if the transfer was successful
      */
-    function transferFromPusd(address from, address to, uint256 amount) external returns (bool) {
+    function transferToPusd(address from, uint256 amount) external returns (bool) {
         require(pusdAddress != address(0), "PUSD address not set");
         require(from != address(0), "Cannot transfer from zero address");
-        require(to != address(0), "Cannot transfer to zero address");
         require(amount > 0, "Amount must be greater than zero");
-        
-        // Call transferFrom on the PUSD contract
-        bool success = IERC20(pusdAddress).transferFrom(from, to, amount);
-        require(success, "PUSD transfer failed");
-        
-        emit TransferredFromPUSD(from, to, amount);
+        require(balanceOf(from) >= amount, "Insufficient balance");
+        // transfer from from address to pusd contract address
+        _transfer(from, pusdAddress, amount);
+        emit TransferredToPUSD(from, pusdAddress, amount);
         return true;
     }
     
