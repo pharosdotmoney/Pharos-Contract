@@ -5,9 +5,9 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
-import "./OperatorRegistry.sol";
-import "./DelegationManager.sol";
-import "./PUSD.sol";
+import {OperatorRegistry} from "./OperatorRegistry.sol";
+import {DelegationManager} from "./DelegationManager.sol";
+import {PUSD} from "./PUSD.sol";
 
 /**
  * @title LoanManager
@@ -57,7 +57,7 @@ contract LoanManager is Ownable, ReentrancyGuard {
         address _operatorRegistry,
         address _delegationManager,
         address _pusdToken
-    ) {
+    ) Ownable(msg.sender) {
         require(_operatorRegistry != address(0), "Invalid operator registry address");
         require(_delegationManager != address(0), "Invalid delegation manager address");
         require(_pusdToken != address(0), "Invalid PUSD token address");
@@ -95,8 +95,6 @@ contract LoanManager is Ownable, ReentrancyGuard {
         
         // Mint PUSD to the operator
         pusdToken.mint(amount);
-        bool success = pusdToken.transfer(msg.sender, amount);
-        require(success, "PUSD transfer failed");
         
         emit LoanCreated(msg.sender, amount, baseInterestRate, block.timestamp + loanDuration);
     }
@@ -116,9 +114,6 @@ contract LoanManager is Ownable, ReentrancyGuard {
         bool success = pusdToken.transferFrom(msg.sender, address(this), totalRepayment);
         require(success, "PUSD transfer failed");
         
-        // Burn the PUSD
-        pusdToken.withdraw(totalRepayment);
-        
         // Mark loan as repaid
         loan.isRepaid = true;
         
@@ -129,8 +124,7 @@ contract LoanManager is Ownable, ReentrancyGuard {
      * @dev Update the base interest rate
      * @param newRate New base interest rate in basis points
      */
-    function updateBaseRate(uint256 newRate) external {
-        // In a real implementation, this would have access control
+    function updateBaseRate(uint256 newRate) external onlyOwner {
         baseInterestRate = newRate;
         emit BaseRateUpdated(newRate);
     }
@@ -139,8 +133,7 @@ contract LoanManager is Ownable, ReentrancyGuard {
      * @dev Update the Loan-to-Value ratio
      * @param newRatio New LTV ratio in percentage
      */
-    function updateLTVRatio(uint256 newRatio) external {
-        // In a real implementation, this would have access control
+    function updateLTVRatio(uint256 newRatio) external onlyOwner {
         require(newRatio <= 80, "LTV ratio too high");
         ltvRatio = newRatio;
         emit LTVRatioUpdated(newRatio);
