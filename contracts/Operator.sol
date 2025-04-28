@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "./IOperator.sol";
 import "./LoanManager.sol";
 import "./PUSD.sol";
+import "./Eigen.sol";
 
 /**
  * @title Operator Implementation
