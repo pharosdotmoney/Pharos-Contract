@@ -46,6 +46,11 @@ async function main() {
   await operator.waitForDeployment();
   console.log(`Operator deployed to: ${await operator.getAddress()}`);
 
+  // Set Operator address in USDC
+  console.log("\nSetting Operator address in USDC...");
+  await usdc.setOperatorAddress(await operator.getAddress());
+  console.log("Operator address set in USDC");
+
   // Set PUSD in Operator
   console.log("\nSetting PUSD in Operator...");
   await operator.setPUSD(await pusd.getAddress());

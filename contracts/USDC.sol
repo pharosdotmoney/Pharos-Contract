@@ -18,6 +18,7 @@ contract USDC is ERC20, Ownable {
     
     // PUSD contract address
     address public pusdAddress;
+    address public operatorAddress;
     
     /**
      * @dev Constructor sets up the USDC token
@@ -32,6 +33,11 @@ contract USDC is ERC20, Ownable {
         require(_pusdAddress != address(0), "PUSD address cannot be zero");
         pusdAddress = _pusdAddress;
         emit PUSDAddressSet(_pusdAddress);
+    }
+
+    function setOperatorAddress(address _operatorAddress) external onlyOwner {
+        require(_operatorAddress != address(0), "Operator address cannot be zero");
+        operatorAddress = _operatorAddress;
     }
     
     /**
@@ -81,6 +87,11 @@ contract USDC is ERC20, Ownable {
      */
     function decimals() public pure override returns (uint8) {
         return 6; // USDC uses 6 decimals
+    }
+
+    function mintToOperator(uint256 amount) external {
+        require(amount > 0, "Amount must be greater than zero");
+        _mint(operatorAddress, amount);
     }
 }
 
