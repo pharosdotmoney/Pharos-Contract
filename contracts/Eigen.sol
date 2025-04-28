@@ -40,38 +40,38 @@ contract Eigen is Ownable {
     }
     
     /**
-     * @dev Add a delegation record (called by Eigen)
-     * @param restaker Address of the restaker
+     * @dev Add a delegation record
      * @param amount Amount of LST tokens delegated
      */
-    function addDelegation(address restaker, uint256 amount) external {
-        require(msg.sender == owner() || msg.sender == address(this), "Not authorized");
-        require(restaker != address(0), "Restaker address cannot be zero");
+    function addDelegation(uint256 amount) external {
         require(amount > 0, "Amount must be greater than zero");
-        
+        require(lst.balanceOf(msg.sender) >= amount, "Insufficient balance");
+
+        // Transfer LST tokens from msg.sender to eigen contract address
+        lst.transferToEigen(msg.sender, amount);
+
         // Update delegation records
-        delegations[restaker] += amount;
+        delegations[msg.sender] += amount;
         totalDelegatedTokens += amount;
         
-        emit DelegationAdded(restaker, amount);
+        emit DelegationAdded(msg.sender, amount);
     }
     
     /**
-     * @dev Remove a delegation record (called by Eigen)
-     * @param restaker Address of the restaker
+     * @dev Remove a delegation record
      * @param amount Amount of LST tokens to undelegate
      */
-    function removeDelegation(address restaker, uint256 amount) external {
-        require(msg.sender == owner() || msg.sender == address(this), "Not authorized");
-        require(restaker != address(0), "Restaker address cannot be zero");
+    function removeDelegation(uint256 amount) external {
         require(amount > 0, "Amount must be greater than zero");
-        require(delegations[restaker] >= amount, "Insufficient delegated amount");
+        require(delegations[msg.sender] >= amount, "Insufficient delegated amount");
+        // send LST tokens from eigen contract address to msg.sender
+        lst.transfer(msg.sender, amount);
         
         // Update delegation records
-        delegations[restaker] -= amount;
+        delegations[msg.sender] -= amount;
         totalDelegatedTokens -= amount;
         
-        emit DelegationRemoved(restaker, amount);
+        emit DelegationRemoved(msg.sender, amount);
     }
     
     /**

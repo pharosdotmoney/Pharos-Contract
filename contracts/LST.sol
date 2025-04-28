@@ -2,12 +2,15 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "./Eigen.sol";
 
 /**
  * @title RestakingLST Token
  * @dev A simplified Liquid Staking Token (LST) for restaking purposes
  */
-contract LST is ERC20 {
+contract LST is ERC20, Ownable {
+    Eigen public eigen;
     
     // Events
     event TokensMinted(address indexed to, uint256 amount);
@@ -18,7 +21,11 @@ contract LST is ERC20 {
      * @param name Name of the LST token
      * @param symbol Symbol of the LST token
      */
-    constructor(string memory name, string memory symbol) ERC20("Liquid Staking Token", "LST") {
+    constructor(string memory name, string memory symbol) ERC20("Liquid Staking Token", "LST") Ownable(msg.sender) {
+    }
+
+    function setEigenAddress(address _eigenAddress) external onlyOwner {
+        eigen = Eigen(_eigenAddress);
     }
     
     /**
@@ -32,7 +39,7 @@ contract LST is ERC20 {
         
         emit TokensMinted(msg.sender, amount);
     }
-    
+
     /**
      * @dev Allows anyone to burn LST tokens (simulating unstaking)
      * @param amount Amount of tokens to burn
@@ -53,4 +60,13 @@ contract LST is ERC20 {
     function decimals() public pure override returns (uint8) {
         return 18; // Standard ERC20 decimals
     }
+
+    // This call would be made from eigen contract to transfer lst tokens from account addresss to eigen contract address
+    function transferToEigen(address account, uint256 amount) external {
+        require(msg.sender == address(eigen), "Only eigen contract can call this function");
+        require(amount > 0, "Amount must be greater than zero");
+        require(balanceOf(account) >= amount, "Insufficient balance");
+        _transfer(account, address(eigen), amount);
+    }
+
 } 

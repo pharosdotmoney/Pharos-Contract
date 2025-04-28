@@ -66,6 +66,11 @@ async function main() {
   await operator.setEigen(await eigen.getAddress());
   console.log("Eigen set in Operator");
 
+  // Set Eigen address in LST
+  console.log("\nSetting Eigen address in LST...");
+  await lst.setEigenAddress(await eigen.getAddress());
+  console.log("Eigen address set in LST");
+
   // Deploy LoanManager
   console.log("\nDeploying LoanManager...");
   const LoanManager = await ethers.getContractFactory("LoanManager");
