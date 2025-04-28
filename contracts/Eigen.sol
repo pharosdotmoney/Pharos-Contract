@@ -2,7 +2,6 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./LST.sol";
 import "./IOperator.sol";
 
@@ -11,7 +10,7 @@ import "./IOperator.sol";
  * @dev Contract for tracking Eigen token delegations from restakers to operators
  * Simplified version which only tracks a single operator and a single lst token
  */
-contract Eigen is Ownable, ReentrancyGuard {
+contract Eigen is Ownable {
     // Reference to the LST token contract
     LST public lst;
     IOperator public operator;
@@ -45,7 +44,7 @@ contract Eigen is Ownable, ReentrancyGuard {
      * @param restaker Address of the restaker
      * @param amount Amount of LST tokens delegated
      */
-    function addDelegation(address restaker, uint256 amount) external nonReentrant {
+    function addDelegation(address restaker, uint256 amount) external {
         require(msg.sender == owner() || msg.sender == address(this), "Not authorized");
         require(restaker != address(0), "Restaker address cannot be zero");
         require(amount > 0, "Amount must be greater than zero");
@@ -62,7 +61,7 @@ contract Eigen is Ownable, ReentrancyGuard {
      * @param restaker Address of the restaker
      * @param amount Amount of LST tokens to undelegate
      */
-    function removeDelegation(address restaker, uint256 amount) external nonReentrant {
+    function removeDelegation(address restaker, uint256 amount) external {
         require(msg.sender == owner() || msg.sender == address(this), "Not authorized");
         require(restaker != address(0), "Restaker address cannot be zero");
         require(amount > 0, "Amount must be greater than zero");

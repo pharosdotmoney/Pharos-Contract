@@ -4,7 +4,6 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./USDC.sol";
 import "./LoanManager.sol";
 
@@ -12,7 +11,7 @@ import "./LoanManager.sol";
  * @title PUSD Stablecoin
  * @dev A stablecoin that is backed 1:1 by USDC deposits
  */
-contract PUSD is ERC20, Ownable, ReentrancyGuard {
+contract PUSD is ERC20, Ownable {
     USDC public usdc;
     LoanManager public loanManager;
     uint256 public loanedUSDCAmount = 0;
@@ -52,7 +51,7 @@ contract PUSD is ERC20, Ownable, ReentrancyGuard {
      * @notice This function handles both the USDC deposit and PUSD minting in one transaction
      * @notice When depositing USDC, the user's USDC balance decreases and their PUSD balance increases
      */
-    function depositAndMint(uint256 usdcAmount) external nonReentrant {
+    function depositAndMint(uint256 usdcAmount) external {
         require(usdcAmount > 0, "Deposit amount must be greater than zero");
         
         // Check user's USDC balance
@@ -81,7 +80,7 @@ contract PUSD is ERC20, Ownable, ReentrancyGuard {
      * @param pusdAmount Amount of PUSD to burn
      * @notice When withdrawing, the user's PUSD balance decreases and their USDC balance increases
      */
-    function withdraw(uint256 pusdAmount) external nonReentrant {
+    function withdraw(uint256 pusdAmount) external {
         require(pusdAmount > 0, "Withdraw amount must be greater than zero");
         require(balanceOf(msg.sender) >= pusdAmount, "Insufficient PUSD balance");
         
@@ -120,7 +119,7 @@ contract PUSD is ERC20, Ownable, ReentrancyGuard {
     // check if call is from loan manager
     // transfer to operator
     // increment loanedUSDCAmount
-    function transferToOperator(uint256 usdcAmount, address operator) external nonReentrant returns (bool) {
+    function transferToOperator(uint256 usdcAmount, address operator) external returns (bool) {
         require(msg.sender == address(loanManager), "Only loan manager can call this function");
         require(usdcAmount > 0, "Transfer amount must be greater than zero");
         require(usdc.balanceOf(address(this)) >= usdcAmount, "Insufficient USDC balance");
@@ -129,7 +128,7 @@ contract PUSD is ERC20, Ownable, ReentrancyGuard {
         return true;
     } 
 
-    function transferFromOperator(uint256 usdcAmount, address operator) external nonReentrant returns (bool) {
+    function transferFromOperator(uint256 usdcAmount, address operator) external returns (bool) {
         require(msg.sender == address(loanManager), "Only loan manager can call this function");
         require(usdcAmount > 0, "Transfer amount must be greater than zero");
         require(usdc.balanceOf(operator) >= usdcAmount, "Insufficient USDC balance");
