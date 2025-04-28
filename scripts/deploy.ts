@@ -112,6 +112,7 @@ async function main() {
     USDC: await usdc.getAddress(),
     LST: await lst.getAddress(),
     PUSD: await pusd.getAddress(),
+    PUSDC: await pusd.getAddress(),
     Operator: await operator.getAddress(),
     Eigen: await eigen.getAddress(),
     LoanManager: await loanManager.getAddress(),
