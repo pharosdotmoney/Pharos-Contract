@@ -6,12 +6,6 @@ pragma solidity ^0.8.20;
  * @dev Interface for operators in the restaking system
  */
 interface IOperator {
-    /**
-     * @dev Register as an operator in the system
-     * @param name Name of the operator
-     * @param metadataURI URI pointing to operator metadata
-     */
-    function register(string memory name, string memory metadataURI) external;
     
     /**
      * @dev Get the total amount delegated to this operator

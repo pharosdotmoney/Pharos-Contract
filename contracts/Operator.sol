@@ -10,6 +10,7 @@ import "./PUSD.sol";
  * @dev Implementation of the Operator interface
  */
 contract Operator is IOperator {
+    Eigen public eigen;
     LoanManager public loanManager;
     PUSD public pusdToken;
     
@@ -17,18 +18,9 @@ contract Operator is IOperator {
     
     /**
      * @dev Constructor sets up the Operator
-     * @param _loanManager Address of the loan manager
-     * @param _pusdToken Address of the PUSD token
      */
     constructor(
-        address _loanManager,
-        address _pusdToken
     ) {
-        require(_loanManager != address(0), "Invalid loan manager address");
-        require(_pusdToken != address(0), "Invalid PUSD token address");
-        
-        loanManager = LoanManager(_loanManager);
-        pusdToken = PUSD(_pusdToken);
         owner = msg.sender;
     }
     
@@ -39,7 +31,21 @@ contract Operator is IOperator {
         require(msg.sender == owner, "Not authorized");
         _;
     }
-    
+
+    function setPUSD(address _pusdToken) external onlyOwner {
+        require(_pusdToken != address(0), "Invalid PUSD token address");
+        pusdToken = PUSD(_pusdToken);
+    }
+
+    function setLoanManager(address _loanManager) external onlyOwner {
+        require(_loanManager != address(0), "Invalid loan manager address");
+        loanManager = LoanManager(_loanManager);
+    } 
+
+    function setEigen(address _eigen) external onlyOwner {
+        require(_eigen != address(0), "Invalid eigen address");
+        eigen = Eigen(_eigen);
+    }
 
     /**
      * @dev Create a loan based on delegated tokens
@@ -54,7 +60,7 @@ contract Operator is IOperator {
      */
     function repayLoan() external override onlyOwner {
         // Approve PUSD transfer to loan manager
-        uint256 repaymentAmount = loanManager.calculateRepaymentAmount(address(this));
+        uint256 repaymentAmount = loanManager.calculateRepaymentAmount();
         pusdToken.approve(address(loanManager), repaymentAmount);
         
         // Repay the loan
@@ -72,7 +78,7 @@ contract Operator is IOperator {
         uint256 dueTime,
         bool isRepaid
     ) {
-        (amount,,,dueTime,isRepaid,) = loanManager.getLoanDetails();
+        (amount,,,dueTime,isRepaid,,) = loanManager.getLoanDetails();
         return (amount, dueTime, isRepaid);
     }
     
@@ -101,5 +107,9 @@ contract Operator is IOperator {
      */
     function recoverERC20(address token, address to, uint256 amount) external onlyOwner {
         IERC20(token).transfer(to, amount);
+    }
+
+    function getTotalDelegated() external view returns (uint256) {
+        return eigen.getTotalDelegated();
     }
 } 

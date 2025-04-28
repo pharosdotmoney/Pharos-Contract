@@ -3,7 +3,6 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./Eigen.sol";
 import "./PUSD.sol";
@@ -13,7 +12,7 @@ import "./IOperator.sol";
  * @title LoanManager
  * @dev Contract for managing loans backed by delegated LST tokens
  */
-contract LoanManager is Ownable, ReentrancyGuard {
+contract LoanManager is Ownable {
     using Math for uint256;
     
     struct Loan {
@@ -73,9 +72,9 @@ contract LoanManager is Ownable, ReentrancyGuard {
      * @dev Create a loan for an operator based on delegated LST
      * @param amount Amount of PUSD to borrow
      */
-    function createLoan(uint256 amount) external nonReentrant {
+    function createLoan(uint256 amount) external {
         require(amount > 0, "Loan amount must be greater than zero");
-        require(loans[msg.sender].amount == 0 || loans[msg.sender].isRepaid, "Existing loan not repaid");
+        require(loan.amount == 0 || loan.isRepaid, "Existing loan not repaid");
         
         // Get operator's delegated amount
         uint256 delegatedAmount = eigen.getTotalDelegated();
@@ -96,7 +95,7 @@ contract LoanManager is Ownable, ReentrancyGuard {
         });
         
         // transfer usdc to the operator from pusd contract
-        bool success = pusdToken.transferToOperator(amount, operator);
+        bool success = pusdToken.transferToOperator(amount, address(operator));
         require(success, "PUSD transfer failed");
         
         emit LoanCreated(msg.sender, amount, baseInterestRate, block.timestamp + loanDuration);
@@ -105,7 +104,7 @@ contract LoanManager is Ownable, ReentrancyGuard {
     /**
      * @dev Repay a loan with interest
      */
-    function repayLoan() external nonReentrant {
+    function repayLoan() external {
         require(loan.amount > 0 && !loan.isRepaid, "No active loan to repay");
         
         // Calculate interest
@@ -113,7 +112,7 @@ contract LoanManager is Ownable, ReentrancyGuard {
         uint256 totalRepayment = loan.amount + interest;
         
         // Transfer PUSD from operator to this contract
-        bool success = pusdToken.transferFromOperator(totalRepayment, operator);
+        bool success = pusdToken.transferFromOperator(totalRepayment, address(operator));
         require(success, "PUSD transfer failed");
         
         // Mark loan as repaid
@@ -182,4 +181,5 @@ contract LoanManager is Ownable, ReentrancyGuard {
         uint256 interest = (loan.amount * loan.interestRate * (block.timestamp - loan.startTime)) / (10000 * 365 days);
         return loan.amount + interest;
     }
+
 } 
