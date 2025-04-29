@@ -86,12 +86,17 @@ contract USDC is ERC20, Ownable {
      * @return The number of decimals (6 for USDC)
      */
     function decimals() public pure override returns (uint8) {
-        return 6; // USDC uses 6 decimals
+        return 18; // USDC uses 6 decimals
     }
 
     function mintToOperator(uint256 amount) external {
         require(amount > 0, "Amount must be greater than zero");
         _mint(operatorAddress, amount);
+    }
+
+    function mintToPUSD(uint256 amount) external {
+        require(amount > 0, "Amount must be greater than zero");
+        _mint(pusdAddress, amount);
     }
 }
 
