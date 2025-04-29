@@ -27,6 +27,11 @@ async function main() {
   await lst.waitForDeployment();
   console.log(`LST deployed to: ${await lst.getAddress()}`);
 
+  // set usdc address in lst
+  console.log("\nSetting USDC address in LST...");
+  await lst.setUSDCAddress(await usdc.getAddress());
+  console.log("USDC address set in LST");
+
   // Deploy PUSD
   console.log("\nDeploying PUSD...");
   const PUSD = await ethers.getContractFactory("PUSD");

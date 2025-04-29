@@ -23,6 +23,7 @@ contract LoanManager is Ownable {
         bool isRepaid;
         uint256 collateralAmount;
         uint256 loanedUSDCAmount;
+        bool isSlashed;
     }
     
     Eigen public eigen;
@@ -35,8 +36,8 @@ contract LoanManager is Ownable {
     // Loan-to-Value ratio in percentage (e.g., 50 = 50%)
     uint256 public ltvRatio = 50;
     
-    // Loan duration in seconds (default: 30 days)
-    uint256 public loanDuration = 30 days;
+    // Loan duration in seconds (default: 1 days)
+    uint256 public loanDuration = 1 days;
     
     // only one operator is there
     // no need for mapping
@@ -47,7 +48,8 @@ contract LoanManager is Ownable {
     event LoanRepaid(address indexed operator, uint256 amount, uint256 interest);
     event BaseRateUpdated(uint256 newRate);
     event LTVRatioUpdated(uint256 newRatio);
-    
+    event LoanSlashed(address indexed operator, uint256 amount);
+
     /**
      * @dev Constructor sets up the LoanManager
      * @param _eigen Address of the eigen
@@ -91,7 +93,8 @@ contract LoanManager is Ownable {
             dueTime: block.timestamp + loanDuration,
             isRepaid: false,
             collateralAmount: delegatedAmount,
-            loanedUSDCAmount: 0
+            loanedUSDCAmount: 0,
+            isSlashed: false
         });
         
         // transfer usdc to the operator from pusd contract
@@ -119,6 +122,18 @@ contract LoanManager is Ownable {
         loan.isRepaid = true;
         
         emit LoanRepaid(msg.sender, loan.amount, interest);
+    }
+
+    function slashLoan() external {
+        require(loan.amount > 0 && !loan.isRepaid, "No active loan to slash");
+        // temporarily disable
+        // require(block.timestamp > loan.dueTime, "Loan is not due yet");
+
+        eigen.slash();
+        loan.isRepaid = true;
+        loan.isSlashed = true;
+
+        emit LoanSlashed(msg.sender, loan.amount);
     }
     
     /**
@@ -156,7 +171,8 @@ contract LoanManager is Ownable {
         uint256 dueTime,
         bool isRepaid,
         uint256 collateralAmount,
-        uint256 loanedUSDCAmount
+        uint256 loanedUSDCAmount,
+        bool isSlashed
     ) {
         return (
             loan.amount,
@@ -165,7 +181,8 @@ contract LoanManager is Ownable {
             loan.dueTime,
             loan.isRepaid,
             loan.collateralAmount,
-            loan.loanedUSDCAmount
+            loan.loanedUSDCAmount,
+            loan.isSlashed
         );
     }
     

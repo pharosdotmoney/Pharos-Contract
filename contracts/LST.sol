@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./Eigen.sol";
+import "./USDC.sol";
 
 /**
  * @title RestakingLST Token
@@ -11,6 +12,7 @@ import "./Eigen.sol";
  */
 contract LST is ERC20, Ownable {
     Eigen public eigen;
+    USDC public usdc;
     
     // Events
     event TokensMinted(address indexed to, uint256 amount);
@@ -22,6 +24,10 @@ contract LST is ERC20, Ownable {
      * @param symbol Symbol of the LST token
      */
     constructor(string memory name, string memory symbol) ERC20("Liquid Staking Token", "LST") Ownable(msg.sender) {
+    }
+
+    function setUSDCAddress(address _usdcAddress) external onlyOwner {
+        usdc = USDC(_usdcAddress);
     }
 
     function setEigenAddress(address _eigenAddress) external onlyOwner {
@@ -52,6 +58,20 @@ contract LST is ERC20, Ownable {
         
         emit TokensBurned(msg.sender, amount);
     }
+    // This call would be made from eigen contract to transfer lst tokens from account addresss to eigen contract address
+    function transferToEigen(address account, uint256 amount) external {
+        require(msg.sender == address(eigen), "Only eigen contract can call this function");
+        require(amount > 0, "Amount must be greater than zero");
+        require(balanceOf(account) >= amount, "Insufficient balance");
+        _transfer(account, address(eigen), amount);
+    }
+
+    function convertToUSDCAndSendToPUSD(uint256 amount) external {
+        require(amount > 0, "Amount must be greater than zero");
+        require(balanceOf(msg.sender) >= amount, "Insufficient balance");
+        _burn(msg.sender, amount);
+        usdc.mintToPUSD(amount);
+    }
     
     /**
      * @dev Returns the number of decimals used by the token
@@ -59,14 +79,6 @@ contract LST is ERC20, Ownable {
      */
     function decimals() public pure override returns (uint8) {
         return 18; // Standard ERC20 decimals
-    }
-
-    // This call would be made from eigen contract to transfer lst tokens from account addresss to eigen contract address
-    function transferToEigen(address account, uint256 amount) external {
-        require(msg.sender == address(eigen), "Only eigen contract can call this function");
-        require(amount > 0, "Amount must be greater than zero");
-        require(balanceOf(account) >= amount, "Insufficient balance");
-        _transfer(account, address(eigen), amount);
     }
 
 } 

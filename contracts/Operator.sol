@@ -79,7 +79,7 @@ contract Operator is IOperator {
         uint256 dueTime,
         bool isRepaid
     ) {
-        (amount,,,dueTime,isRepaid,,) = loanManager.getLoanDetails();
+        (amount,,,dueTime,isRepaid,,,) = loanManager.getLoanDetails();
         return (amount, dueTime, isRepaid);
     }
     

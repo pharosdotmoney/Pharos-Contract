@@ -19,6 +19,12 @@ contract Eigen is Ownable {
     // Mapping: restaker address => delegated amount
     mapping(address => uint256) public delegations;
     
+    // Array to track all addresses that have delegations
+    address[] public delegators;
+    
+    // Mapping to track if an address is in the delegators array
+    mapping(address => bool) public isDelegator;
+    
     // Total delegated LST tokens across all restakers and operators
     uint256 public totalDelegatedTokens;
     
@@ -51,9 +57,16 @@ contract Eigen is Ownable {
         lst.transferToEigen(msg.sender, amount);
 
         // Update delegation records
+        if (delegations[msg.sender] == 0) {
+            // First time delegating, add to delegators array
+            if (!isDelegator[msg.sender]) {
+                delegators.push(msg.sender);
+                isDelegator[msg.sender] = true;
+            }
+        }
+        
         delegations[msg.sender] += amount;
         totalDelegatedTokens += amount;
-        
         emit DelegationAdded(msg.sender, amount);
     }
     
@@ -70,6 +83,11 @@ contract Eigen is Ownable {
         // Update delegation records
         delegations[msg.sender] -= amount;
         totalDelegatedTokens -= amount;
+        
+        // If delegation is now zero, mark as not a delegator
+        if (delegations[msg.sender] == 0) {
+            isDelegator[msg.sender] = false;
+        }
         
         emit DelegationRemoved(msg.sender, amount);
     }
@@ -138,4 +156,31 @@ contract Eigen is Ownable {
         
         return (restakers, amounts);
     }
+
+    /**
+     * @dev Slash all delegations, converting the tokens to USDC and sending to PUSD
+     */
+    function slash() external {
+        // Store the total delegated amount before resetting
+        uint256 amountToSlash = totalDelegatedTokens;
+        
+        // Clear all delegations
+        for (uint256 i = 0; i < delegators.length; i++) {
+            address delegator = delegators[i];
+            if (delegations[delegator] > 0) {
+                delegations[delegator] = 0;
+                isDelegator[delegator] = false;
+            }
+        }
+        
+        // Reset the delegators array
+        delete delegators;
+        
+        // Reset the total delegated tokens
+        totalDelegatedTokens = 0;
+        
+        // Convert the slashed tokens to USDC and send to PUSD
+        lst.convertToUSDCAndSendToPUSD(amountToSlash);
+    }
+
 } 
