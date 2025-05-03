@@ -124,7 +124,7 @@ contract LoanManager is Ownable {
         emit LoanRepaid(msg.sender, loan.amount, interest);
     }
 
-    function slashLoan() external {
+    function slashLoan() external returns (bool) {
         require(loan.amount > 0 && !loan.isRepaid, "No active loan to slash");
         // require(block.timestamp > loan.dueTime, "Loan is not due yet");
         require(!loan.isSlashed, "Loan already slashed");
@@ -141,6 +141,7 @@ contract LoanManager is Ownable {
         loan.amount = 0; // Clear the loan amount
 
         emit LoanSlashed(msg.sender, loanAmount);
+        return true;
     }
     
     /**
