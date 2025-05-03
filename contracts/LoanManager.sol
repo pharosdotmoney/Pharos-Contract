@@ -126,14 +126,21 @@ contract LoanManager is Ownable {
 
     function slashLoan() external {
         require(loan.amount > 0 && !loan.isRepaid, "No active loan to slash");
-        // temporarily disable
         // require(block.timestamp > loan.dueTime, "Loan is not due yet");
+        require(!loan.isSlashed, "Loan already slashed");
 
+        // Store the loan amount before slashing
+        uint256 loanAmount = loan.amount;
+        
+        // Call eigen to slash the delegations
         eigen.slash();
+        
+        // Update loan state
         loan.isRepaid = true;
         loan.isSlashed = true;
+        loan.amount = 0; // Clear the loan amount
 
-        emit LoanSlashed(msg.sender, loan.amount);
+        emit LoanSlashed(msg.sender, loanAmount);
     }
     
     /**

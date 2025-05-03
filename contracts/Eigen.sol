@@ -161,6 +161,8 @@ contract Eigen is Ownable {
      * @dev Slash all delegations, converting the tokens to USDC and sending to PUSD
      */
     function slash() external {
+        require(totalDelegatedTokens > 0, "No tokens to slash");
+        
         // Store the total delegated amount before resetting
         uint256 amountToSlash = totalDelegatedTokens;
         
@@ -173,13 +175,14 @@ contract Eigen is Ownable {
             }
         }
         
-        // Reset the delegators array
-        delete delegators;
+        // Reset the delegators array by creating a new empty array
+        delegators = new address[](0);
         
         // Reset the total delegated tokens
         totalDelegatedTokens = 0;
         
         // Convert the slashed tokens to USDC and send to PUSD
+        require(address(lst) != address(0), "LST contract not set");
         lst.convertToUSDCAndSendToPUSD(amountToSlash);
     }
 

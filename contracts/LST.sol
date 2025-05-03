@@ -77,8 +77,15 @@ contract LST is ERC20, Ownable {
         require(msg.sender == address(eigen), "Only eigen contract can call this function");
         require(amount > 0, "Amount must be greater than zero");
         require(balanceOf(msg.sender) >= amount, "Insufficient balance");
-        pusd.mintPusdAndTransferToSPUSD(amount);
+        require(address(pusd) != address(0), "PUSD contract not set");
+        require(address(usdc) != address(0), "USDC contract not set");
+        
+        // Burn the LST tokens from the eigen contract
         _burn(msg.sender, amount);
+        
+        // Convert to USDC and send to PUSD
+        bool success = pusd.mintPusdAndTransferToSPUSD(amount);
+        require(success, "PUSD conversion failed");
     }
     
     /**
