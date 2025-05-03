@@ -27,11 +27,6 @@ async function main() {
   await lst.waitForDeployment();
   console.log(`LST deployed to: ${await lst.getAddress()}`);
 
-  // set usdc address in lst
-  console.log("\nSetting USDC address in LST...");
-  await lst.setUSDCAddress(await usdc.getAddress());
-  console.log("USDC address set in LST");
-
   // Deploy PUSD
   console.log("\nDeploying PUSD...");
   const PUSD = await ethers.getContractFactory("PUSD");
@@ -39,10 +34,12 @@ async function main() {
   await pusd.waitForDeployment();
   console.log(`PUSD deployed to: ${await pusd.getAddress()}`);
 
-  // Set PUSD address in USDC
-  console.log("\nSetting PUSD address in USDC...");
-  await usdc.setPusdAddress(await pusd.getAddress());
-  console.log("PUSD address set in USDC");
+  // Deploy sPUSD
+  console.log("\nDeploying sPUSD...");
+  const sPUSD = await ethers.getContractFactory("sPUSD");
+  const spusd = await sPUSD.deploy(await pusd.getAddress());
+  await spusd.waitForDeployment();
+  console.log(`sPUSD deployed to: ${await spusd.getAddress()}`);
 
   // Deploy Operator first (since Eigen needs it)
   console.log("\nDeploying Operator...");
@@ -50,16 +47,6 @@ async function main() {
   const operator = await Operator.deploy();
   await operator.waitForDeployment();
   console.log(`Operator deployed to: ${await operator.getAddress()}`);
-
-  // Set Operator address in USDC
-  console.log("\nSetting Operator address in USDC...");
-  await usdc.setOperatorAddress(await operator.getAddress());
-  console.log("Operator address set in USDC");
-
-  // Set PUSD in Operator
-  console.log("\nSetting PUSD in Operator...");
-  await operator.setPUSD(await pusd.getAddress());
-  console.log("PUSD set in Operator");
 
   // Deploy Eigen with both required parameters
   console.log("\nDeploying Eigen...");
@@ -71,42 +58,55 @@ async function main() {
   await eigen.waitForDeployment();
   console.log(`Eigen deployed to: ${await eigen.getAddress()}`);
 
-  // Set Eigen in Operator
-  console.log("\nSetting Eigen in Operator...");
-  await operator.setEigen(await eigen.getAddress());
-  console.log("Eigen set in Operator");
-
-  // Set Eigen address in LST
-  console.log("\nSetting Eigen address in LST...");
-  await lst.setEigenAddress(await eigen.getAddress());
-  console.log("Eigen address set in LST");
-
   // Deploy LoanManager
   console.log("\nDeploying LoanManager...");
   const LoanManager = await ethers.getContractFactory("LoanManager");
   const loanManager = await LoanManager.deploy(
     await eigen.getAddress(),
-    await pusd.getAddress(),
+    await spusd.getAddress(),
     await operator.getAddress()
   );
   await loanManager.waitForDeployment();
   console.log(`LoanManager deployed to: ${await loanManager.getAddress()}`);
 
-  // Update LoanManager address in Operator
-  console.log("\nUpdating LoanManager address in Operator...");
-  await operator.setLoanManager(await loanManager.getAddress());
-  console.log("LoanManager address updated in Operator");
+  // Now set up all the required addresses in the correct order
 
-  // Set LoanManager in PUSD
-  console.log("\nSetting LoanManager in PUSD...");
+  // Set USDC addresses
+  console.log("\nSetting addresses in USDC...");
+  await usdc.setPusdAddress(await pusd.getAddress());
+  await usdc.setOperatorAddress(await operator.getAddress());
+  console.log("USDC addresses set");
+
+  // Set LST addresses
+  console.log("\nSetting addresses in LST...");
+  await lst.setUSDCAddress(await usdc.getAddress());
+  await lst.setEigenAddress(await eigen.getAddress());
+  console.log("LST addresses set");
+
+  // Set PUSD addresses
+  console.log("\nSetting addresses in PUSD...");
   await pusd.setLoanManager(await loanManager.getAddress());
-  console.log("LoanManager set in PUSD");
+  await pusd.setsPUSDAddress(await spusd.getAddress());
+  console.log("PUSD addresses set");
+
+  // Set sPUSD addresses
+  console.log("\nSetting addresses in sPUSD...");
+  await spusd.setLoanManager(await loanManager.getAddress());
+  console.log("sPUSD addresses set");
+
+  // Set Operator addresses
+  console.log("\nSetting addresses in Operator...");
+  await operator.setPUSD(await pusd.getAddress());
+  await operator.setEigen(await eigen.getAddress());
+  await operator.setLoanManager(await loanManager.getAddress());
+  console.log("Operator addresses set");
 
   // Print all deployed contract addresses
   console.log("\n=== Deployed Contract Addresses ===");
   console.log(`USDC: ${await usdc.getAddress()}`);
   console.log(`LST: ${await lst.getAddress()}`);
   console.log(`PUSD: ${await pusd.getAddress()}`);
+  console.log(`sPUSD: ${await spusd.getAddress()}`);
   console.log(`Operator: ${await operator.getAddress()}`);
   console.log(`Eigen: ${await eigen.getAddress()}`);
   console.log(`LoanManager: ${await loanManager.getAddress()}`);
@@ -117,7 +117,7 @@ async function main() {
     USDC: await usdc.getAddress(),
     LST: await lst.getAddress(),
     PUSD: await pusd.getAddress(),
-    PUSDC: await pusd.getAddress(),
+    sPUSD: await spusd.getAddress(),
     Operator: await operator.getAddress(),
     Eigen: await eigen.getAddress(),
     LoanManager: await loanManager.getAddress(),

@@ -13,6 +13,7 @@ import "./LoanManager.sol";
  */
 contract PUSD is ERC20, Ownable {
     USDC public usdc;
+    address public sPUSDAddress;
     LoanManager public loanManager;
     uint256 public loanedUSDCAmount = 0;
     
@@ -43,6 +44,11 @@ contract PUSD is ERC20, Ownable {
     function setLoanManager(address _loanManager) external onlyOwner {
         require(_loanManager != address(0), "Loan manager address cannot be zero");
         loanManager = LoanManager(_loanManager);
+    }
+
+    function setsPUSDAddress(address _sPUSD) external onlyOwner {
+        require(_sPUSD != address(0), "sPUSD address cannot be zero");
+        sPUSDAddress = _sPUSD;
     }
     
     /**
@@ -115,25 +121,18 @@ contract PUSD is ERC20, Ownable {
     //     emit Mint(msg.sender, pusdAmount);
     // }
 
-    // check usdc balance of address this
-    // check if call is from loan manager
-    // transfer to operator
-    // increment loanedUSDCAmount
-    function transferToOperator(uint256 usdcAmount, address operator) external returns (bool) {
-        require(msg.sender == address(loanManager), "Only loan manager can call this function");
-        require(usdcAmount > 0, "Transfer amount must be greater than zero");
-        require(usdc.balanceOf(address(this)) >= usdcAmount, "Insufficient USDC balance");
-        usdc.transfer(operator, usdcAmount);
-        loanedUSDCAmount += usdcAmount;
+    function transferToSPUSD(address from, uint256 pusdAmount) external returns (bool) {
+        require(pusdAmount > 0, "Transfer amount must be greater than zero");
+        require(balanceOf(from) >= pusdAmount, "Insufficient PUSD balance");
+        _transfer(from, sPUSDAddress, pusdAmount);
         return true;
-    } 
-
-    function transferFromOperator(uint256 usdcAmount, address operator) external returns (bool) {
-        require(msg.sender == address(loanManager), "Only loan manager can call this function");
-        require(usdcAmount > 0, "Transfer amount must be greater than zero");
-        require(usdc.balanceOf(operator) >= usdcAmount, "Insufficient USDC balance");
-        usdc.transfer(address(this), usdcAmount);
-        loanedUSDCAmount -= usdcAmount;
+    }
+    
+    function mintPusdAndTransferToSPUSD(address to, uint256 pusdAmount) external returns (bool) {
+        require(pusdAmount > 0, "Transfer amount must be greater than zero");
+        usdc.mintToPUSD(pusdAmount);
+        _mint(to, pusdAmount);
+        _transfer(to, sPUSDAddress, pusdAmount);
         return true;
     }
 

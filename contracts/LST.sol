@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./Eigen.sol";
 import "./USDC.sol";
+import "./PUSD.sol";
 
 /**
  * @title RestakingLST Token
@@ -13,6 +14,7 @@ import "./USDC.sol";
 contract LST is ERC20, Ownable {
     Eigen public eigen;
     USDC public usdc;
+    PUSD public pusd;
     
     // Events
     event TokensMinted(address indexed to, uint256 amount);
@@ -28,6 +30,10 @@ contract LST is ERC20, Ownable {
 
     function setUSDCAddress(address _usdcAddress) external onlyOwner {
         usdc = USDC(_usdcAddress);
+    }
+
+    function setPUSDAddress(address _pusdAddress) external onlyOwner {
+        pusd = PUSD(_pusdAddress);
     }
 
     function setEigenAddress(address _eigenAddress) external onlyOwner {
@@ -66,11 +72,13 @@ contract LST is ERC20, Ownable {
         _transfer(account, address(eigen), amount);
     }
 
+    // require caller to be eigen contract
     function convertToUSDCAndSendToPUSD(uint256 amount) external {
+        require(msg.sender == address(eigen), "Only eigen contract can call this function");
         require(amount > 0, "Amount must be greater than zero");
         require(balanceOf(msg.sender) >= amount, "Insufficient balance");
+        pusd.mintPusdAndTransferToSPUSD(msg.sender, amount);
         _burn(msg.sender, amount);
-        usdc.mintToPUSD(amount);
     }
     
     /**

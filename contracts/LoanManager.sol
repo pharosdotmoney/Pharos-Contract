@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./Eigen.sol";
-import "./PUSD.sol";
+import "./sPUSD.sol";
 import "./IOperator.sol";
 
 /**
@@ -27,7 +27,7 @@ contract LoanManager is Ownable {
     }
     
     Eigen public eigen;
-    PUSD public pusdToken;
+    sPUSD public spusdToken;
     IOperator public operator;
     
     // Base interest rate in basis points (e.g., 300 = 3%)
@@ -53,20 +53,20 @@ contract LoanManager is Ownable {
     /**
      * @dev Constructor sets up the LoanManager
      * @param _eigen Address of the eigen
-     * @param _pusdToken Address of the PUSD token
+     * @param _spusdToken Address of the sPUSD token
      * @param _operator Address of the operator
      */
     constructor(
         address _eigen,
-        address _pusdToken,
+        address _spusdToken,
         address _operator
     ) Ownable(msg.sender) {
         require(_eigen != address(0), "Invalid eigen address");
-        require(_pusdToken != address(0), "Invalid PUSD token address");
+        require(_spusdToken != address(0), "Invalid sPUSD token address");
         require(_operator != address(0), "Invalid operator address");
         
         eigen = Eigen(_eigen);
-        pusdToken = PUSD(_pusdToken);
+        spusdToken = sPUSD(_spusdToken);
         operator = IOperator(_operator);
     }
     
@@ -97,8 +97,8 @@ contract LoanManager is Ownable {
             isSlashed: false
         });
         
-        // transfer usdc to the operator from pusd contract
-        bool success = pusdToken.transferToOperator(amount, address(operator));
+        // transfer pusdc to the operator from pusd contract
+        bool success = spusdToken.transferToOperator(amount, address(operator));
         require(success, "PUSD transfer failed");
         
         emit LoanCreated(msg.sender, amount, baseInterestRate, block.timestamp + loanDuration);
@@ -115,7 +115,7 @@ contract LoanManager is Ownable {
         uint256 totalRepayment = loan.amount + interest;
         
         // Transfer PUSD from operator to this contract
-        bool success = pusdToken.transferFromOperator(totalRepayment, address(operator));
+        bool success = spusdToken.transferFromOperator(totalRepayment, address(operator));
         require(success, "PUSD transfer failed");
         
         // Mark loan as repaid
