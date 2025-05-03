@@ -86,6 +86,7 @@ async function main() {
   console.log("\nSetting addresses in LST...");
   await lst.setUSDCAddress(await usdc.getAddress());
   await lst.setEigenAddress(await eigen.getAddress());
+  await lst.setPUSDAddress(await pusd.getAddress());
   console.log("LST addresses set");
 
   // Set PUSD addresses
