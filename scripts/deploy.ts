@@ -75,6 +75,10 @@ async function main() {
   console.log(`LoanManager deployed to: ${await loanManager.getAddress()}`);
 
   // Now set up all the required addresses in the correct order
+  // Set PUSD token address in LoanManager
+  console.log("\nSetting PUSD token address in LoanManager...");
+  await loanManager.setPUSDToken(await pusd.getAddress());
+  console.log("PUSD token address set in LoanManager");
 
   // Set USDC addresses
   console.log("\nSetting addresses in USDC...");

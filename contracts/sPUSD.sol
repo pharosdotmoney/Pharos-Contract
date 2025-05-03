@@ -14,15 +14,17 @@ contract sPUSD is ERC4626, Ownable {
     PUSD public pusdToken;
     address public loanManager;
     uint256 public loanedPUSDCAmount = 0;
-    
+
     // Events
     event PUSDAddressSet(address indexed pusdAddress);
-    
+
     /**
      * @dev Constructor sets up the sPUSD vault
      * @param _pusdToken Address of the PUSD token contract
      */
-    constructor(address _pusdToken)
+    constructor(
+        address _pusdToken
+    )
         ERC4626(IERC20(_pusdToken))
         ERC20("Staked PUSD", "sPUSD")
         Ownable(msg.sender)
@@ -31,7 +33,12 @@ contract sPUSD is ERC4626, Ownable {
         pusdToken = PUSD(_pusdToken);
     }
 
-    function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
+    function _deposit(
+        address caller,
+        address receiver,
+        uint256 assets,
+        uint256 shares
+    ) internal override {
         // If asset() is ERC-777, `transferFrom` can trigger a reentrancy BEFORE the transfer happens through the
         // `tokensToSend` hook. On the other hand, the `tokenReceived` hook, that is triggered after the transfer,
         // calls the vault, which is assumed not malicious.
@@ -69,33 +76,55 @@ contract sPUSD is ERC4626, Ownable {
 
         emit Withdraw(caller, receiver, _owner, assets, shares);
     }
+
     /**
      * @dev Sets the loan manager address
      * @param _loanManager Address of the loan manager contract
      */
     function setLoanManager(address _loanManager) external onlyOwner {
-        require(_loanManager != address(0), "Loan manager address cannot be zero");
+        require(
+            _loanManager != address(0),
+            "Loan manager address cannot be zero"
+        );
         loanManager = _loanManager;
     }
 
-    function transferToOperator(uint256 pusdcAmount, address operator) external returns (bool) {
-        require(msg.sender == loanManager, "Only loan manager can call this function");
+    function transferToOperator(
+        uint256 pusdcAmount,
+        address operator
+    ) external returns (bool) {
+        require(
+            msg.sender == loanManager,
+            "Only loan manager can call this function"
+        );
         require(pusdcAmount > 0, "Transfer amount must be greater than zero");
-        require(pusdToken.balanceOf(address(this)) >= pusdcAmount, "Insufficient PUSDC balance");
+        require(
+            pusdToken.balanceOf(address(this)) >= pusdcAmount,
+            "Insufficient PUSDC balance"
+        );
         pusdToken.transfer(operator, pusdcAmount);
         loanedPUSDCAmount += pusdcAmount;
         return true;
-    } 
+    }
 
-    function transferFromOperator(uint256 pusdcAmount, address operator) external returns (bool) {
-        require(msg.sender == loanManager, "Only loan manager can call this function");
+    function transferFromOperator(
+        uint256 pusdcAmount,
+        address operator
+    ) external returns (bool) {
+        require(
+            msg.sender == loanManager,
+            "Only loan manager can call this function"
+        );
         require(pusdcAmount > 0, "Transfer amount must be greater than zero");
-        require(pusdToken.balanceOf(operator) >= pusdcAmount, "Insufficient PUSDC balance");
-        pusdToken.transfer(address(this), pusdcAmount);
+        require(
+            pusdToken.balanceOf(operator) >= pusdcAmount,
+            "Insufficient PUSDC balance"
+        );
+        pusdToken.transferFromOperator(pusdcAmount, operator, address(this));
         loanedPUSDCAmount -= pusdcAmount;
         return true;
     }
-    
+
     /**
      * @dev Returns the number of decimals used by the token
      * @return The number of decimals (18 for standard ERC20)
@@ -103,5 +132,4 @@ contract sPUSD is ERC4626, Ownable {
     function decimals() public pure override returns (uint8) {
         return 18;
     }
-    
 }
