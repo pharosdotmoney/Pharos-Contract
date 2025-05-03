@@ -15,6 +15,7 @@ contract PUSD is ERC20, Ownable {
     USDC public usdc;
     address public sPUSDAddress;
     LoanManager public loanManager;
+    address public operatorAddress;
     uint256 public loanedUSDCAmount = 0;
     
     // Mapping to track user deposits
@@ -44,6 +45,11 @@ contract PUSD is ERC20, Ownable {
     function setLoanManager(address _loanManager) external onlyOwner {
         require(_loanManager != address(0), "Loan manager address cannot be zero");
         loanManager = LoanManager(_loanManager);
+    }
+
+    function setOperatorAddress(address _operatorAddress) external onlyOwner {
+        require(_operatorAddress != address(0), "Operator address cannot be zero");
+        operatorAddress = _operatorAddress;
     }
 
     function setsPUSDAddress(address _sPUSD) external onlyOwner {
@@ -128,12 +134,17 @@ contract PUSD is ERC20, Ownable {
         return true;
     }
     
-    function mintPusdAndTransferToSPUSD(address to, uint256 pusdAmount) external returns (bool) {
+    function mintPusdAndTransferToSPUSD(uint256 pusdAmount) external returns (bool) {
         require(pusdAmount > 0, "Transfer amount must be greater than zero");
         usdc.mintToPUSD(pusdAmount);
-        _mint(to, pusdAmount);
-        _transfer(to, sPUSDAddress, pusdAmount);
+        _mint(sPUSDAddress, pusdAmount);
         return true;
+    }
+
+    function mintToOperator(uint256 amount) external {
+        require(amount > 0, "Amount must be greater than zero");
+        usdc.mintToPUSD(amount);
+        _mint(operatorAddress, amount);
     }
 
     /**

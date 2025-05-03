@@ -48,6 +48,11 @@ async function main() {
   await operator.waitForDeployment();
   console.log(`Operator deployed to: ${await operator.getAddress()}`);
 
+  // Set operator address in PUSD
+  console.log("\nSetting operator address in PUSD...");
+  await pusd.setOperatorAddress(await operator.getAddress());
+  console.log("Operator address set in PUSD");
+
   // Deploy Eigen with both required parameters
   console.log("\nDeploying Eigen...");
   const Eigen = await ethers.getContractFactory("Eigen");

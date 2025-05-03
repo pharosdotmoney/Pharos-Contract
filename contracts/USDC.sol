@@ -95,6 +95,8 @@ contract USDC is ERC20, Ownable {
     }
 
     function mintToPUSD(uint256 amount) external {
+        require(pusdAddress != address(0), "PUSD address not set");
+        require(msg.sender == pusdAddress, "Only PUSD contract can call this function");
         require(amount > 0, "Amount must be greater than zero");
         _mint(pusdAddress, amount);
     }
